@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Untitled Document</title>
+<style>
+.text-inputs {
+	margin-left: -20px;
+}
+.text-input {
+	float:left;
+	margin-left: 20px;
+}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="textNode.js"></script>
+<script src="svgNode.js"></script>
+<script src="svg.min.js"></script>
+<script>
+
+var   PATH = "M 0 50 C 0 0 200 0 200 50"
+	, LOREM = "Lorem ipsum dolor sit amet consectetur. Cras sodales imperdiet auctor."
+	, FONT1 = {
+		  family:   'Arial'
+		, size:     40
+		, anchor:   'left'
+		, leading:  '1em'
+	  }
+	, FONT2 = {
+		  family:   'Helvetica'
+		, size:     40
+		, anchor:   'left'
+		, leading:  '1.2em'
+	  }
+	, Canvas = {
+		init : function(el) {
+			this.el = el;
+			this.$el = $(el);
+			this.width = this.$el.parent().width()
+			this.height = this.width/2;
+			this.ctx = this.el.getContext('2d')
+			this.el.width = this.width;
+			this.el.height = this.height;
+			this.scale = this.width/1024;
+		}
+	 }
+	;
+
+function tContainer (canvas, template) {
+	var self = this;
+	this.Canvas = canvas;
+	this.background = {color: '#ffffff', opacity: 0};
+	this.x =0;
+	this.y =0;
+	this.w = 400;
+	this.texts = [];
+
+	$.extend(this, template);
+
+	this.x = Math.round(this.x*this.Canvas.scale);
+	this.y = Math.round(this.y*this.Canvas.scale);
+	this.resize(this.Canvas.scale);
+
+	var originalTexts = $.extend([], this.texts);
+	this.texts = [];
+	originalTexts.forEach(function(textObject) {
+		//self.texts.push(new svgNode(textObject, self));
+		self.texts.push(new TextNode(textObject, self));
+	});
+
+	this.scale(this.Canvas.scale, true);
+}
+tContainer.prototype = {
+	resize : function(n) {
+		this.w = Math.round(this.w*n);
+		this.padding = Math.max(Math.round(this.w*.02), 5);
+		this.centerX = Math.round(this.w/2);
+	},
+	setHeight : function() {
+		var self = this;
+		
+		// calculate y position of each text node
+		var i = this.y, lineHeight;
+		this.h = 0;
+		this.texts.forEach(function(text) {
+			lineHeight = text.height+10;
+			text.y = i;
+			i += lineHeight;
+			self.h += lineHeight;
+		});
+
+		this.h -= 10;
+	},
+	scale : function(n, initializing) {
+		var self = this;
+
+		if ( !initializing ) this.resize(n);
+
+		this.texts.forEach(function(text) {
+			text.set({font: $.extend({}, text.font, {size: Math.round(text.font.size*n)})})
+		});
+		this.draw();
+	},
+	move : function() {
+		this.draw();
+	},
+	draw : function() {
+		var ctx = this.Canvas.ctx;
+		this.setHeight();
+		ctx.clearRect(0, 0, Canvas.width, Canvas.height);
+		this.drawBackground();
+		//ctx.strokeRect(this.x, this.y, this.w, this.h);
+		this.texts.forEach(function(text) {	text.draw(); });
+	},
+	drawBackground : function() {
+		var ctx = this.Canvas.ctx
+			, pad = this.padding
+			;
+		ctx.save();
+		ctx.fillStyle = "rgba(200,200,200, .3)";
+		ctx.fillRect(this.x-pad, this.y-pad, this.w+2*pad, this.h+3*pad);
+		ctx.restore();
+	}
+}
+
+
+
+
+$(function() {
+
+	var template = {
+			x : 50,
+			y : 50,
+			w : 400,
+			background : {color: '#ffffff', opacity: 0},
+			texts : [
+				//{text: 'ANNOUNCEMENTS', font:FONT1, align:'middle', path:PATH},
+				{text: LOREM, font: FONT2},
+				{text: LOREM, font: FONT2}
+			]
+	};
+		   
+	Canvas.init($('#mycanvas').get(0));
+	var TextContainer = new tContainer(Canvas, template);
+
+	$('button.saveText').on('click', function() {
+		var index = parseInt($(this).parent().data('index'))
+			, text = $(this).parent().find('textarea').val()
+			;
+		TextContainer.texts[index].set({text:text});
+		TextContainer.draw();
+	});
+	
+	$('button.scaleText').on('click', function() {
+		var amount = parseFloat($(this).data('amount'))
+		TextContainer.scale(amount);
+	});
+	
+});
+
+</script>
+</head>
+
+<body>
+
+<div id="container" style="width:500px; margin: 20px auto;">
+
+	<div id="drawing"></div>
+
+    <button class="scaleText" data-amount="1.1">++</button>&nbsp;&nbsp;
+    <button class="scaleText" data-amount=".9">--</button>
+    <br/>
+    <canvas id="mycanvas" style="margin:20px auto; border: 1px solid #555;"></canvas>
+    <br/><br/>
+  
+    <div class="text-inputs">
+        <div class="text-input" data-index="0">
+            <textarea cols="25" rows="10">Hello</textarea>
+            <br/>
+            <button class="saveText">Save</button>&nbsp;&nbsp;
+        </div>
+        <div class="text-input" data-index="1">
+            <textarea cols="25" rows="10">Hello</textarea>
+            <br/>
+            <button class="saveText">Save</button>&nbsp;&nbsp;
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
